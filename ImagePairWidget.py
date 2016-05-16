@@ -1,17 +1,24 @@
 from tkinter import *
 import cv2
 
-class ImagePairWidget():
-	
-	def __init__(self, m, n, imageList, labelPairList):
+class ImagePairWidget(Frame):
+			  
+	def __init__(self, parent, m, imageList, labelPairList, pairLoadedCallback):
+		Frame.__init__(self, parent)  
 
-		Button(menu1, text="Get Image "+m, command = lambda: self.loadImage(m)).pack(side=LEFT)
-		Button(menu1, text="Get Image "+n, command = lambda: self.loadImage(n)).pack(side=LEFT)
-		self.pair1Label = Label(menu1)
+		self.m = m
+
+		Button(self, text="Get Image "+str(m+1), command = lambda: self.loadImage(m)).pack(side=LEFT)
+		Button(self, text="Get Image "+str(m+2), command = lambda: self.loadImage(m+1)).pack(side=LEFT)
+		self.pair1Label = Label(self)
 		self.pair1Label.pack(side=LEFT)
 		
 		self.images = imageList
 		self.labelPairs = labelPairList
+		
+		labelPairList[int(m/2)] = self.pair1Label
+		
+		self.pairLoadedCallback = pairLoadedCallback
 
 	def loadImage(self, label):
 		openImage = filedialog.askopenfilename()
@@ -38,5 +45,5 @@ class ImagePairWidget():
 					
 				currentLabel.config(text="Image Pair Set to "+firstImage+", "+secondImage)
 				
-				if len(self.images) > 5:
-					self.calibrateButton.config(state='normal')
+				self.pairLoadedCallback()
+

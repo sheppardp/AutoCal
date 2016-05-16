@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from numpy import linalg as npl
 from OpenCVCanvas import OpenCVCanvas
+from ImagePairWidget import ImagePairWidget
 
 class SolverGUI(Tk):
 	
@@ -26,12 +27,12 @@ class SolverGUI(Tk):
 		self.geometry(halfWidth+"x"+halfHeight+"+"+halfWidth+"+0")
 		
 		# Build the menu bars
-		menu1 = Frame(self)
-		menu1.pack()
-		menu2 = Frame(self)
-		menu2.pack()
-		menu3 = Frame(self)
-		menu3.pack()
+		self.imagePairWidgetMenu = Frame(self)
+		self.imagePairWidgetMenu.pack()
+		#menu2 = Frame(self)
+		#menu2.pack()
+		#menu3 = Frame(self)
+		#menu3.pack()
 		menu4 = Frame(self)
 		menu4.pack()
 		
@@ -46,23 +47,16 @@ class SolverGUI(Tk):
 		menu7.pack()
 		
 		self.images = {}
+		self.pairLabels = {}
 		
-		Button(menu1, text="Get Image 1", command = lambda: self.loadImage(0)).pack(side=LEFT)
-		Button(menu1, text="Get Image 2", command = lambda: self.loadImage(1)).pack(side=LEFT)
-		self.pair1Label = Label(menu1)
-		self.pair1Label.pack(side=LEFT)
-		
-		Button(menu2, text="Get Image 3", command = lambda: self.loadImage(2)).pack(side=LEFT)
-		Button(menu2, text="Get Image 4", command = lambda: self.loadImage(3)).pack(side=LEFT)
-		self.pair2Label = Label(menu2)
-		self.pair2Label.pack(side=LEFT)
-		
-		Button(menu3, text="Get Image 5", command = lambda: self.loadImage(4)).pack(side=LEFT)
-		Button(menu3, text="Get Image 6", command = lambda: self.loadImage(5)).pack(side=LEFT)
-		self.pair3Label = Label(menu3)
-		self.pair3Label.pack(side=LEFT)
-		
-		self.pairLabels = [self.pair1Label, self.pair2Label, self.pair3Label]
+		# Allow the user to change the number of steps in the orbit
+		self.numImagePairs = StringVar()
+		self.numImagePairs.set(3)
+		self.imagePairWidgetList = []
+		self.setNumImagePairs(int(self.numImagePairs.get()))
+		Label(menu4, text = "Number of Image Pairs").pack(side=LEFT)
+		self.numImagePairsSpinbox = Spinbox(menu4, from_=3, to=10, increment=1, textvariable=self.numImagePairs, command=lambda: self.setNumImagePairs(int(self.numImagePairs.get())))
+		self.numImagePairsSpinbox.pack(side=LEFT)
 		
 		self.calibrateButton = Button(menu4, text="Run Calibration", state='disabled', command = self.calibrate)
 		self.calibrateButton.pack(side=LEFT)
@@ -82,10 +76,23 @@ class SolverGUI(Tk):
 		self.nextMatchImageButton.pack(side=LEFT)
 		self.currentMatchImage = 0		
 		self.matchImages = []
+				
+	def setNumImagePairs(self, numImagePairs):
+		print(numImagePairs)
 		
-
-		self.labelPairs = {0:self.pair1Label, 1:self.pair2Label, 2:self.pair3Label}				
+		for imagePairWidget in self.imagePairWidgetList:
+			imagePairWidget.destroy()
 		
+		self.imagePairWidgetList = []
+		for i in range(numImagePairs):
+			imagePairWidget = ImagePairWidget(self.imagePairWidgetMenu, i*2,self.images, self.pairLabels, self.pairLoaded)
+			imagePairWidget.pack()
+			self.imagePairWidgetList.append(imagePairWidget)
+			
+	def	pairLoaded(self):
+		if len(self.images) > 5:
+			self.calibrateButton.config(state='normal')
+					
 	def loadImage(self, label):
 		openImage = filedialog.askopenfilename()
 		
@@ -115,7 +122,7 @@ class SolverGUI(Tk):
 					
 	def setMatchImage(self, pos):
 		if self.matchImages[pos] is not None:
-			self.imageCanvas1.publishArray(self.matchImages[pos][0])
+			self.imageCanvas1.publishArray(self.matchImages[pos][1])
 			
 			for i in range(len(self.pairLabels)):
 				if i == pos:
@@ -123,7 +130,7 @@ class SolverGUI(Tk):
 				else:
 					self.pairLabels[i].configure(background='light gray')
 			
-			circString = "Circular Points: ({:.5f}, {:.5f})   ({:.5f}, {:.5f})".format(self.matchImages[pos][1][0][0], self.matchImages[pos][1][0][1], self.matchImages[pos][1][1][0], self.matchImages[pos][1][1][1])
+			circString = "Circular Points: ({:.5f}, {:.5f})   ({:.5f}, {:.5f})".format(self.matchImages[pos][0][0][0], self.matchImages[pos][0][0][1], self.matchImages[pos][0][1][0], self.matchImages[pos][0][1][1])
 			
 			self.circularPointLabel.config(text=str(circString))
 			
@@ -149,18 +156,26 @@ class SolverGUI(Tk):
 		
 		np.set_printoptions(precision=2, suppress=True, linewidth=200)
 
+		self.matchImages = []
+		for i in range(int(len(self.images)/2)):
+			self.matchImages.append(Calibrate.getCriticalPoints(self.images[i*2][0], self.images[i*2+1][0]))
 		
-		critical0, matchImage0, homography0 = Calibrate.getCriticalPoints(self.images[0][0], self.images[1][0])
-		critical1, matchImage1, homography1 = Calibrate.getCriticalPoints(self.images[2][0], self.images[3][0])
-		critical2, matchImage2, homography2 = Calibrate.getCriticalPoints(self.images[4][0], self.images[5][0])
+		#critical0, matchImage0, homography0 = Calibrate.getCriticalPoints(self.images[0][0], self.images[1][0])
+		#critical1, matchImage1, homography1 = Calibrate.getCriticalPoints(self.images[2][0], self.images[3][0])
+		#critical2, matchImage2, homography2 = Calibrate.getCriticalPoints(self.images[4][0], self.images[5][0])
 		
-		self.matchImages = [[matchImage0, critical0, homography0], [matchImage1, critical1, homography1], [matchImage2, critical2, homography2]]
+		#self.matchImages = [[matchImage0, critical0, homography0], [matchImage1, critical1, homography1], [matchImage2, critical2, homography2]]
 		self.setMatchImage(0)
 
-
-		#A = np.array(Calibrate.getConic([critical0[0]]+critical1+critical2))
-		A = np.array(Calibrate.getConic(critical0+critical1+critical2))
 		#A = np.array(Calibrate.getFocalLengthConic(critical1))
+
+		#A = np.array(Calibrate.getConic(critical0+critical1+critical2))
+
+		DLT = []
+		for matchImage in self.matchImages:
+			DLT +=  matchImage[0]
+
+		A = np.array(Calibrate.getConic(DLT))
 
 		print("A: ", A)
 		

@@ -83,7 +83,7 @@ def getCriticalPoints(image1, image2):
 			output[matchImage.shape[0]:matchImage.shape[0]+warp.shape[0], 0:warp.shape[1]] = image2-warp
 			output[matchImage.shape[0]:matchImage.shape[0]+warp.shape[0], warp.shape[1]:2*warp.shape[1]] = warp
 
-			return criticalPoints, output, M
+			return [criticalPoints, output, M]
 			
 		else:
 			print("No valid homography found")
