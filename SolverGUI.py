@@ -42,6 +42,8 @@ class SolverGUI(Tk):
 		menu5.pack()
 		menu6 = Frame(self)
 		menu6.pack()
+		menu7 = Frame(self)
+		menu7.pack()
 		
 		self.images = {}
 		
@@ -68,18 +70,20 @@ class SolverGUI(Tk):
 		self.imageCanvas1 = OpenCVCanvas(imageRow, height=windowHeight, width=windowWidth)
 		self.imageCanvas1.pack(side=LEFT)
 		
-		self.criticalPointLabel = Label(menu5)
-		self.criticalPointLabel.pack(side=LEFT)
+		self.homographyLabel = Label(menu5)
+		self.homographyLabel.pack(side=LEFT)
 		
-		self.pvsMatchImageButton = Button(menu6, text="Previous Matches", state='disabled', command = lambda: self.setMatchImage(self.currentMatchImage-1))
+		self.circularPointLabel = Label(menu6)
+		self.circularPointLabel.pack(side=LEFT)
+		
+		self.pvsMatchImageButton = Button(menu7, text="Previous Matches", state='disabled', command = lambda: self.setMatchImage(self.currentMatchImage-1))
 		self.pvsMatchImageButton.pack(side=LEFT)
-		self.nextMatchImageButton = Button(menu6, text="Next Matches", state='disabled', command = lambda: self.setMatchImage(self.currentMatchImage+1))
+		self.nextMatchImageButton = Button(menu7, text="Next Matches", state='disabled', command = lambda: self.setMatchImage(self.currentMatchImage+1))
 		self.nextMatchImageButton.pack(side=LEFT)
 		self.currentMatchImage = 0		
 		self.matchImages = []
 		
 
-		
 		self.labelPairs = {0:self.pair1Label, 1:self.pair2Label, 2:self.pair3Label}				
 		
 	def loadImage(self, label):
@@ -119,9 +123,17 @@ class SolverGUI(Tk):
 				else:
 					self.pairLabels[i].configure(background='light gray')
 			
-			critString = "Circular Points: ({:.5f}, {:.5f})   ({:.5f}, {:.5f})".format(self.matchImages[pos][1][0][0], self.matchImages[pos][1][0][1], self.matchImages[pos][1][1][0], self.matchImages[pos][1][1][1])
+			circString = "Circular Points: ({:.5f}, {:.5f})   ({:.5f}, {:.5f})".format(self.matchImages[pos][1][0][0], self.matchImages[pos][1][0][1], self.matchImages[pos][1][1][0], self.matchImages[pos][1][1][1])
 			
-			self.criticalPointLabel.config(text=str(critString))
+			self.circularPointLabel.config(text=str(circString))
+			
+			
+			homographyString = ("Homography: | {:.5f}   {:.5f}   {:.5f} |\n"+
+							    "            | {:.5f}   {:.5f}   {:.5f} |\n"+
+							    "            | {:.5f}   {:.5f}   {:.5f} |").format(self.matchImages[pos][2][0][0], self.matchImages[pos][2][0][1], self.matchImages[pos][2][0][2], 
+																				   self.matchImages[pos][2][1][0], self.matchImages[pos][2][1][1], self.matchImages[pos][2][1][2], 
+																				   self.matchImages[pos][2][2][0], self.matchImages[pos][2][2][1], self.matchImages[pos][2][2][2])
+			self.homographyLabel.config(text=str(homographyString))
 			
 			if pos < len(self.matchImages) - 1:
 				self.nextMatchImageButton.config(state='normal')
@@ -138,42 +150,24 @@ class SolverGUI(Tk):
 		np.set_printoptions(precision=2, suppress=True, linewidth=200)
 
 		
-		critical0, matchImage0 = Calibrate.getCriticalPoints(self.images[0][0], self.images[1][0])
-		critical1, matchImage1 = Calibrate.getCriticalPoints(self.images[2][0], self.images[3][0])
-		critical2, matchImage2 = Calibrate.getCriticalPoints(self.images[4][0], self.images[5][0])
+		critical0, matchImage0, homography0 = Calibrate.getCriticalPoints(self.images[0][0], self.images[1][0])
+		critical1, matchImage1, homography1 = Calibrate.getCriticalPoints(self.images[2][0], self.images[3][0])
+		critical2, matchImage2, homography2 = Calibrate.getCriticalPoints(self.images[4][0], self.images[5][0])
 		
-		self.matchImages = [[matchImage0, critical0], [matchImage1, critical1], [matchImage2, critical2]]
+		self.matchImages = [[matchImage0, critical0, homography0], [matchImage1, critical1, homography1], [matchImage2, critical2, homography2]]
 		self.setMatchImage(0)
 
 
-		A = np.array(Calibrate.getConic(critical0+critical1+[critical2[0]]))
+		#A = np.array(Calibrate.getConic([critical0[0]]+critical1+critical2))
+		A = np.array(Calibrate.getConic(critical0+critical1+critical2))
+		#A = np.array(Calibrate.getFocalLengthConic(critical1))
 
 		print("A: ", A)
-
-		u,s,v = npl.svd(A)
-
-		print(u,s,v)
-
-		conic = v[-1,:]
-
-		a=conic[0]
-		b=conic[1]
-		c=conic[2]
-		d=conic[3]
-		e=conic[4]
-		f=conic[5]
-
-		iac = np.array([[a, b/2, d/2],[b/2, c, e/2],[d/2, e/2, f]])
 		
-		print("iac: ",iac)
+		K = Calibrate.getCameraParameters(A)
+		#K = Calibrate.getFocalLength(A)
 
-		diac = npl.inv(iac)
-
-		print(diac)
-
-		K = npl.cholesky(diac)
-
-		print(K)
+		print("K:", K)
 
 
 app = SolverGUI()
