@@ -1,6 +1,7 @@
 from tkinter import *
 import cv2
 
+# Display the controls for loading 2 images into an image pair
 class ImagePairWidget(Frame):
 			  
 	def __init__(self, parent, m, imageList, labelPairList, pairLoadedCallback):
@@ -20,6 +21,7 @@ class ImagePairWidget(Frame):
 		
 		self.pairLoadedCallback = pairLoadedCallback
 
+	# load each image
 	def loadImage(self, label):
 		openImage = filedialog.askopenfilename()
 		
